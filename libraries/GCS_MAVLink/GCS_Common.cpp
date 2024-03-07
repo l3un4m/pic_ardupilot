@@ -1156,10 +1156,12 @@ uint16_t GCS_MAVLINK::get_reschedule_interval_ms(const deferred_message_bucket_t
         // we are sending requests for waypoints, penalize streams:
         interval_ms *= 4;
     }
+#if AP_MAVLINK_FTP_ENABLED
     if (AP_HAL::millis() - ftp.last_send_ms < 500) {
         // we are sending ftp replies
         interval_ms *= 4;
     }
+#endif
 
     if (interval_ms > 60000) {
         return 60000;
@@ -4005,9 +4007,11 @@ void GCS_MAVLINK::handle_message(const mavlink_message_t &msg)
         break;
 #endif
 
+#if AP_MAVLINK_FTP_ENABLED
     case MAVLINK_MSG_ID_FILE_TRANSFER_PROTOCOL:
         handle_file_transfer_protocol(msg);
         break;
+#endif
 
 #if AP_CAMERA_ENABLED
     case MAVLINK_MSG_ID_DIGICAM_CONTROL:
@@ -4103,7 +4107,7 @@ void GCS_MAVLINK::handle_message(const mavlink_message_t &msg)
     case MAVLINK_MSG_ID_GPS_INPUT:
     case MAVLINK_MSG_ID_HIL_GPS:
     case MAVLINK_MSG_ID_GPS_INJECT_DATA:
-        AP::gps().handle_msg(msg);
+        AP::gps().handle_msg(chan, msg);
         break;
 #endif
 
@@ -5065,7 +5069,7 @@ MAV_RESULT GCS_MAVLINK::handle_command_do_set_home(const mavlink_command_int_t &
 #if AP_AHRS_POSITION_RESET_ENABLED
 MAV_RESULT GCS_MAVLINK::handle_command_int_external_position_estimate(const mavlink_command_int_t &packet)
 {
-    if (packet.frame != MAV_FRAME_GLOBAL ||
+    if ((packet.frame != MAV_FRAME_GLOBAL && packet.frame != MAV_FRAME_GLOBAL_INT) ||
         !isnan(packet.z)) {
         // we only support global frame without altitude
         return MAV_RESULT_DENIED;
@@ -6771,10 +6775,12 @@ uint64_t GCS_MAVLINK::capabilities() const
     }
 #endif
 
+#if AP_MAVLINK_FTP_ENABLED
     if (!AP_BoardConfig::ftp_disabled()){  //if ftp disable board option is not set
         ret |= MAV_PROTOCOL_CAPABILITY_FTP;
     }
- 
+#endif
+
     return ret;
 }
 
